@@ -1,0 +1,27 @@
+{
+  "name": "حضور و غیاب من",
+  "short_name": "حضور و غیاب",
+  "description": "ثبت حضور و غیاب درس‌ها با تقویم شمسی",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f7",
+  "theme_color": "#4f46e5",
+  "lang": "fa",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
