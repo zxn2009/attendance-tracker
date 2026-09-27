@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>حضور و غیاب من</title>
+
+<!-- PWA Configuration -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="apple-touch-icon" href="./icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="حضور و غیاب">
+
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Vazirmatn, Tahoma, sans-serif;
+    background: #eef2f7; color: #0f172a;
+    min-height: 100vh; padding: 20px 16px; line-height: 1.6;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 22px;
+  }
+  h1 { font-size: 22px; }
+  .muted { color: #94a3b8; font-size: 13px; }
+
+  .btn {
+    font-family: inherit; font-size: 14px; padding: 10px 16px;
+    border-radius: 10px; border: 1px solid #cbd5e1; background: #fff;
+    color: #0f172a; cursor: pointer; transition: 0.15s;
+  }
+  .btn:hover { border-color: #4f46e5; color: #4f46e5; }
+  .btn.primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+  .btn.primary:hover { background: #4338ca; color: #fff; }
+  .btn.danger { color: #dc2626; border-color: #dc2626; }
+  .btn.danger:hover { background: #dc2626; color: #fff; }
+  .btn.sm { padding: 7px 12px; font-size: 13px; }
+
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+    padding: 18px; margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(15,23,42,0.05);
+  }
+  #addCourseCard {
+    display: none;
+    animation: slideDown 0.25s ease;
+  }
+  #addCourseCard.open { display: block; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row > input { flex: 1; min-width: 180px; }
+
+  input[type="text"], textarea, select {
+    font-family: inherit; font-size: 14px; padding: 11px 14px;
+    border: 1px solid #cbd5e1; border-radius: 10px; background: #fff;
+    color: #0f172a; outline: none; width: 100%;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  select { cursor: pointer; }
+  input:focus, textarea:focus, select:focus {
+    border-color: #4f46e5; box-shadow: 0 0 0 3px #eef2ff;
+  }
+  h2 { font-size: 16px; margin-bottom: 14px; }
+
+  .course-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+  .course-card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+    padding: 16px; cursor: pointer; transition: 0.2s;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .course-card:hover { border-color: #4f46e5; transform: translateY(-2px); }
+  .course-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 8px; margin-bottom: 2px;
+  }
+  .course-head h3 { font-size: 16px; word-break: break-word; }
+  .icon-btn {
+    background: none; border: none; cursor: pointer; font-size: 15px;
+    padding: 4px 6px; border-radius: 6px; color: #94a3b8; font-family: inherit;
+  }
+  .icon-btn:hover { color: #dc2626; background: #fee2e2; }
+
+  .progress { height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin: 8px 0; }
+  .progress > div {
+    height: 100%; background: #16a34a; border-radius: 99px; transition: width 0.3s;
+  }
+  .progress > div.mid { background: #d97706; }
+  .progress > div.low { background: #dc2626; }
+
+  .stats-mini { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+  .stats-mini span { padding: 3px 8px; border-radius: 99px; background: #f1f5f9; }
+  .stats-mini .present { background: #dcfce7; color: #16a34a; }
+  .stats-mini .late { background: #fef3c7; color: #d97706; }
+  .stats-mini .absent { background: #fee2e2; color: #dc2626; }
+  .stats-mini .excused { background: #e2e8f0; color: #64748b; }
+
+  .note-preview {
+    font-size: 12px; color: #64748b; background: #f8fafc;
+    padding: 6px 10px; border-radius: 8px; border-right: 3px solid #4f46e5;
+    margin-top: 4px;
+  }
+
+  .empty {
+    grid-column: 1 / -1; text-align: center; padding: 40px 20px;
+    border: 2px dashed #cbd5e1; border-radius: 16px; color: #94a3b8;
+  }
+  .empty .btn { margin-top: 14px; }
+
+  .overlay {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+    background: rgba(15,23,42,0.5); display: none;
+    align-items: center; justify-content: center;
+    padding: 16px; z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 20px; width: 100%;
+    max-width: 640px; max-height: 88vh; overflow-y: auto; padding: 22px;
+  }
+  .modal-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 10px; margin-bottom: 18px;
+  }
+  .modal-head h2 { margin-bottom: 4px; }
+
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;
+  }
+  .stat { background: #f8fafc; border-radius: 12px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 20px; }
+  .stat span { font-size: 12px; color: #94a3b8; }
+  .stat.present b { color: #16a34a; }
+  .stat.late b { color: #d97706; }
+  .stat.absent b { color: #dc2626; }
+  .stat.excused b { color: #64748b; }
+
+  .add-session {
+    background: #f8fafc; border-radius: 14px; padding: 14px; margin-bottom: 18px;
+  }
+  .add-session label {
+    font-size: 13px; color: #64748b; display: block; margin-bottom: 6px;
+  }
+  .add-session .field { margin-bottom: 10px; }
+
+  .date-row {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1fr;
+    gap: 8px;
+  }
+
+  .status-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px;
+  }
+  .status-grid .btn { font-size: 13px; padding: 10px 6px; }
+  .status-grid .btn.present:hover { border-color: #16a34a; color: #16a34a; }
+  .status-grid .btn.late:hover { border-color: #d97706; color: #d97706; }
+  .status-grid .btn.absent:hover { border-color: #dc2626; color: #dc2626; }
+  .status-grid .btn.excused:hover { border-color: #64748b; color: #64748b; }
+
+  .section-title {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 18px 0 10px;
+  }
+  .section-title h2 { margin: 0; }
+
+  .session-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; border: 1px solid #e2e8f0;
+    border-radius: 10px; margin-bottom: 6px;
+  }
+  .session-item .main { flex: 1; min-width: 0; }
+  .session-item .date { font-size: 13px; font-weight: 500; }
+  .session-item .session-note {
+    font-size: 12px; color: #64748b; margin-top: 4px;
+    background: #f8fafc; padding: 5px 8px; border-radius: 6px;
+  }
+
+  .badge {
+    font-size: 12px; padding: 4px 10px; border-radius: 99px;
+    font-weight: 500; white-space: nowrap;
+  }
+  .badge.present { background: #dcfce7; color: #16a34a; }
+  .badge.late { background: #fef3c7; color: #d97706; }
+  .badge.absent { background: #fee2e2; color: #dc2626; }
+  .badge.excused { background: #e2e8f0; color: #64748b; }
+
+  .notes-box {
+    background: #f8fafc; border-radius: 14px; padding: 14px; margin-top: 8px;
+  }
+  .note-item {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
+  }
+  .note-item .note-content { flex: 1; min-width: 0; }
+  .note-item .note-text {
+    font-size: 13px; white-space: pre-wrap; word-break: break-word;
+  }
+  .note-item .note-time {
+    font-size: 11px; color: #94a3b8; margin-top: 4px;
+  }
+  .note-form { display: flex; gap: 8px; margin-bottom: 10px; }
+  .note-form textarea { min-height: 44px; }
+
+  .backup-list { display: flex; flex-direction: column; gap: 12px; }
+  .backup-item {
+    border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .backup-item h4 { font-size: 14px; margin-bottom: 4px; }
+  .backup-item p { font-size: 12px; color: #94a3b8; }
+
+  .file-input { display: none; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translate(-50%, 150%);
+    background: #0f172a; color: #fff;
+    padding: 12px 20px; border-radius: 12px; font-size: 14px;
+    transition: transform 0.3s, opacity 0.3s, visibility 0.3s;
+    z-index: 100; max-width: 90vw; text-align: center;
+    visibility: hidden; opacity: 0; pointer-events: none;
+  }
+  .toast.show {
+    transform: translate(-50%, 0);
+    visibility: visible; opacity: 1; pointer-events: auto;
+  }
+  .toast.error { background: #dc2626; }
+
+  @media (max-width: 520px) {
+    .stats-row, .status-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>📋 حضور و غیاب من</h1>
+      <p class="muted" id="lastBackup">هنوز پشتیبان نگرفته‌ای</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn" type="button" id="installBtn" style="display:none">📲 نصب برنامه</button>
+      <button class="btn primary" type="button" id="toggleAddCourse">➕ افزودن درس</button>
+      <button class="btn" type="button" id="openBackup">💾 پشتیبان‌گیری</button>
+    </div>
+  </header>
+
+  <div class="card" id="addCourseCard">
+    <h2>افزودن درس جدید</h2>
+    <div class="row">
+      <input type="text" id="courseName" placeholder="نام درس" maxlength="60">
+      <input type="text" id="courseTeacher" placeholder="نام استاد (اختیاری)" maxlength="60">
+      <button class="btn primary" type="button" id="addCourseBtn">افزودن</button>
+    </div>
+  </div>
+
+  <div id="courseList" class="course-grid"></div>
+</div>
+
+<!-- Course detail modal -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="detailTitle"></h2>
+        <p class="muted" id="detailTeacher"></p>
+      </div>
+      <button class="icon-btn" type="button" id="closeDetail">✕</button>
+    </div>
+    <div class="stats-row" id="detailStats"></div>
+    <div class="progress"><div id="detailBar"></div></div>
+
+    <div class="add-session">
+      <div class="field">
+        <label>تاریخ جلسه (شمسی)</label>
+        <div class="date-row">
+          <select id="jYear" title="سال"></select>
+          <select id="jMonth" title="ماه"></select>
+          <select id="jDay" title="روز"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="sessionNote">یادداشت جلسه (اختیاری)</label>
+        <textarea id="sessionNote" placeholder="مثلاً: جلسه جبرانی، امتحان میان‌ترم..." maxlength="300"></textarea>
+      </div>
+      <div class="status-grid">
+        <button class="btn present" type="button" data-status="present">✅ حاضر</button>
+        <button class="btn late" type="button" data-status="late">⏰ تأخیر</button>
+        <button class="btn absent" type="button" data-status="absent">❌ غایب</button>
+        <button class="btn excused" type="button" data-status="excused">📝 مرخصی</button>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>📝 یادداشت‌های درس</h2></div>
+    <div class="notes-box">
+      <div class="note-form">
+        <textarea id="newNoteInput" placeholder="یادداشت جدید درباره این درس..." maxlength="500"></textarea>
+        <button class="btn primary sm" type="button" id="addNoteBtn">افزودن</button>
+      </div>
+      <div id="notesList"></div>
+    </div>
+
+    <div class="section-title"><h2>📅 جلسات ثبت‌شده</h2></div>
+    <div id="sessionList"></div>
+  </div>
+</div>
+
+<!-- Backup & restore modal -->
+<div class="overlay" id="backupOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2>پشتیبان‌گیری و بازیابی</h2>
+        <p class="muted">داده‌ها فقط در مرورگر شما ذخیره می‌شوند</p>
+      </div>
+      <button class="icon-btn" type="button" id="closeBackup">✕</button>
+    </div>
+    <div class="backup-list">
+      <div class="backup-item">
+        <div><h4>📥 دانلود پشتیبان</h4><p>فایل JSON از همه داده‌ها (شامل یادداشت‌ها)</p></div>
+        <button class="btn primary" type="button" id="exportJson">دانلود JSON</button>
+      </div>
+      <div class="backup-item">
+        <div><h4>📊 خروجی CSV</h4><p>برای باز کردن در Excel (با تاریخ شمسی و میلادی)</p></div>
+        <button class="btn" type="button" id="exportCsv">دانلود CSV</button>
+      </div>
+      <div class="backup-item">
+        <div><h4>📤 بازیابی از فایل</h4><p>فایل JSON پشتیبان را انتخاب کنید</p></div>
+        <div>
+          <button class="btn" type="button" id="pickFileBtn">انتخاب فایل</button>
+          <input type="file" id="importFile" class="file-input" accept=".json,application/json">
+        </div>
+      </div>
+      <div class="backup-item">
+        <div><h4>🗑 پاک کردن همه</h4><p>قابل بازگشت نیست</p></div>
+        <button class="btn danger" type="button" id="wipeBtn">پاک کردن</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // Global error handler — logs to console instead of blocking with alert
+  window.addEventListener('error', function(e) {
+    console.error('[App Error]', e.message, 'at line', e.lineno);
+  });
+
+  /* =========================================================================
+   * Jalali (Persian) Calendar Conversion
+   * Based on jalaali-js algorithm — self-contained, no external dependencies.
+   * Provides bidirectional conversion between Gregorian and Jalali dates.
+   * ========================================================================= */
+
+  var J_BREAKS = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210,
+                  1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+
+  function jDiv(a, b) { return ~~(a / b); }
+  function jMod(a, b) { return a - ~~(a / b) * b; }
+
+  function jalCal(jy, withoutLeap) {
+    var bl = J_BREAKS.length, gy = jy + 621, leapJ = -14, jp = J_BREAKS[0],
+        jm, jump, leap, leapG, march, n, i;
+
+    if (jy < jp || jy >= J_BREAKS[bl - 1]) {
+      throw new Error('Invalid Jalali year: ' + jy);
+    }
+
+    for (i = 1; i < bl; i += 1) {
+      jm = J_BREAKS[i];
+      jump = jm - jp;
+      if (jy < jm) break;
+      leapJ = leapJ + jDiv(jump, 33) * 8 + jDiv(jMod(jump, 33), 4);
+      jp = jm;
+    }
+    n = jy - jp;
+
+    leapJ = leapJ + jDiv(n, 33) * 8 + jDiv(jMod(n, 33) + 3, 4);
+    if (jMod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+
+    leapG = jDiv(gy, 4) - jDiv((jDiv(gy, 100) + 1) * 3, 4) - 150;
+    march = 20 + leapJ - leapG;
+
+    if (!withoutLeap) {
+      if (jump - n < 6) n = n - jump + jDiv(jump + 4, 33) * 33;
+      leap = jMod(jMod(n + 1, 33) - 1, 4);
+      if (leap === -1) leap = 4;
+    }
+
+    return { leap: leap, gy: gy, march: march };
+  }
+
+  // Gregorian → Julian Day Number
+  function jG2D(gy, gm, gd) {
+    var d = jDiv((gy + jDiv(gm - 8, 6) + 100100) * 1461, 4)
+          + jDiv(153 * jMod(gm + 9, 12) + 2, 5)
+          + gd - 34840408;
+    d = d - jDiv(jDiv(gy + 100100 + jDiv(gm - 8, 6), 100) * 3, 4) + 752;
+    return d;
+  }
+
+  // Julian Day Number → Gregorian
+  function jD2G(jdn) {
+    var j, i, gd, gm, gy;
+    j = 4 * jdn + 139361631;
+    j = j + jDiv(jDiv(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+    i = jDiv(jMod(j, 1461), 4) * 5 + 308;
+    gd = jDiv(jMod(i, 153), 5) + 1;
+    gm = jMod(jDiv(i, 153), 12) + 1;
+    gy = jDiv(j, 1461) - 100100 + jDiv(8 - gm, 6);
+    return { gy: gy, gm: gm, gd: gd };
+  }
+
+  // Jalali → Julian Day Number
+  function jJ2D(jy, jm, jd) {
+    var r = jalCal(jy, true);
+    return jG2D(r.gy, 3, r.march) + (jm - 1) * 31 - jDiv(jm, 7) * (jm - 7) + jd - 1;
+  }
+
+  // Julian Day Number → Jalali
+  function jD2J(jdn) {
+    var gy = jD2G(jdn).gy,
+        jy = gy - 621,
+        r = jalCal(jy, false),
+        jdn1f = jG2D(gy, 3, r.march),
+        jd, jm, k;
+
+    k = jdn - jdn1f;
+    if (k >= 0) {
+      if (k <= 185) {
+        jm = 1 + jDiv(k, 31);
+        jd = jMod(k, 31) + 1;
+        return { jy: jy, jm: jm, jd: jd };
+      } else {
+        k -= 186;
+      }
+    } else {
+      jy -= 1;
+      k += 179;
+      if (r.leap === 1) k += 1;
+    }
+    jm = 7 + jDiv(k, 30);
+    jd = jMod(k, 30) + 1;
+    return { jy: jy, jm: jm, jd: jd };
+  }
+
+  function toJalaali(gy, gm, gd) { return jD2J(jG2D(gy, gm, gd)); }
+  function toGregorian(jy, jm, jd) { return jD2G(jJ2D(jy, jm, jd)); }
+
+  // Returns 29, 30 or 31 depending on the month and year
+  function jalaliMonthLength(jy, jm) {
+    if (jm <= 6) return 31;
+    if (jm <= 11) return 30;
+    try {
+      var g = toGregorian(jy, 12, 30);
+      var back = toJalaali(g.gy, g.gm, g.gd);
+      return (back.jy === jy && back.jm === 12 && back.jd === 30) ? 30 : 29;
+    } catch (e) {
+      return 29;
+    }
+  }
+
+  var J_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور',
+                  'مهر','آبان','آذر','دی','بهمن','اسفند'];
+
+  function isoToJalali(iso) {
+    var p = String(iso).split('-');
+    if (p.length !== 3) return null;
+    try {
+      return toJalaali(parseInt(p[0], 10), parseInt(p[1], 10), parseInt(p[2], 10));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function jalaliToISO(jy, jm, jd) {
+    var g = toGregorian(jy, jm, jd);
+    return g.gy + '-' + pad2(g.gm) + '-' + pad2(g.gd);
+  }
+
+  function pad2(n) { return n < 10 ? '0' + n : String(n); }
+
+  /* =========================================================================
+   * Application State & Constants
+   * ========================================================================= */
+
+  var STORAGE_KEY = 'hazoor_v4';
+
+  var STATUS_LABELS = {
+    present: 'حاضر',
+    late:    'تأخیر',
+    absent:  'غایب',
+    excused: 'مرخصی'
+  };
+
+  var courses = [];
+  var lastBackup = null;
+  var currentCourseId = null;
+  var modalHistoryPushed = false;
+
+  /* =========================================================================
+   * Utility Helpers
+   * ========================================================================= */
+
+  function $(id) { return document.getElementById(id); }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function todayISO() {
+    var d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString().slice(0, 10);
+  }
+
+  function faNum(n) {
+    try { return Number(n).toLocaleString('fa-IR'); }
+    catch (err) { return String(n); }
+  }
+
+  function formatDate(iso) {
+    var j = isoToJalali(iso);
+    if (!j) return iso;
+    var weekdays = ['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
+    var d = new Date(iso + 'T00:00:00');
+    return weekdays[d.getDay()] + ' ' + faNum(j.jd) + ' ' +
+           J_MONTHS[j.jm - 1] + ' ' + faNum(j.jy);
+  }
+
+  function formatDateTime(iso) {
+    try {
+      var d = new Date(iso);
+      var j = toJalaali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+      return faNum(j.jd) + ' ' + J_MONTHS[j.jm - 1] + ' ' + faNum(j.jy) +
+             ' - ساعت ' + faNum(pad2(d.getHours())) + ':' + faNum(pad2(d.getMinutes()));
+    } catch (err) {
+      return iso;
+    }
+  }
+
+  var toastTimer = null;
+  function toast(msg, isError) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (isError ? ' error' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { el.className = 'toast'; }, 2500);
+  }
+
+  /* =========================================================================
+   * Persistence Layer (localStorage)
+   * ========================================================================= */
+
+  function saveData() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        courses: courses,
+        lastBackup: lastBackup
+      }));
+    } catch (err) {
+      console.error('[Save] Failed:', err);
+    }
+  }
+
+  function loadData() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (data && Array.isArray(data.courses)) {
+        courses = data.courses.map(normalizeCourse);
+        lastBackup = data.lastBackup || null;
+      }
+    } catch (err) {
+      console.error('[Load] Failed:', err);
+    }
+  }
+
+  // Sanitizes course objects loaded from storage or imported files
+  function normalizeCourse(c) {
+    return {
+      id: c.id || uid(),
+      name: String(c.name || 'بدون نام').slice(0, 80),
+      teacher: String(c.teacher || '').slice(0, 80),
+      notes: Array.isArray(c.notes) ? c.notes.map(function(n) {
+        return {
+          id: n.id || uid(),
+          text: String(n.text || '').slice(0, 500),
+          createdAt: n.createdAt || new Date().toISOString()
+        };
+      }) : [],
+      sessions: Array.isArray(c.sessions) ? c.sessions
+        .filter(function(s) {
+          return s && s.date && STATUS_LABELS[s.status];
+        })
+        .map(function(s) {
+          return {
+            id: s.id || uid(),
+            date: String(s.date),
+            status: s.status,
+            note: String(s.note || '').slice(0, 300)
+          };
+        }) : []
+    };
+  }
+
+  /* =========================================================================
+   * Statistics & Calculation
+   * ========================================================================= */
+
+  function getStats(course) {
+    var st = { present: 0, late: 0, absent: 0, excused: 0 };
+    (course.sessions || []).forEach(function(s) {
+      if (st[s.status] !== undefined) st[s.status]++;
+    });
+    st.total = (course.sessions || []).length;
+    st.attended = st.present + st.late;
+    st.rate = st.total > 0 ? Math.round(st.attended / st.total * 100) : 0;
+    return st;
+  }
+
+  // Maps attendance rate to a CSS class for the progress bar
+  function rateClass(rate) {
+    if (rate >= 80) return '';
+    if (rate >= 50) return 'mid';
+    return 'low';
+  }
+
+  function findCourse(id) {
+    for (var i = 0; i < courses.length; i++) {
+      if (courses[i].id === id) return courses[i];
+    }
+    return null;
+  }
+
+  /* =========================================================================
+   * Jalali Date Picker (3 dropdowns: year / month / day)
+   * ========================================================================= */
+
+  function initDatePickers() {
+    var today = new Date();
+    var j = toJalaali(today.getFullYear(), today.getMonth() + 1, today.getDate());
+
+    // Populate year dropdown: 3 years back, 1 year ahead
+    var yearSel = $('jYear');
+    yearSel.innerHTML = '';
+    for (var y = j.jy - 3; y <= j.jy + 1; y++) {
+      var opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = faNum(y);
+      yearSel.appendChild(opt);
+    }
+    yearSel.value = j.jy;
+
+    // Populate month dropdown
+    var monthSel = $('jMonth');
+    monthSel.innerHTML = '';
+    for (var m = 1; m <= 12; m++) {
+      var opt2 = document.createElement('option');
+      opt2.value = m;
+      opt2.textContent = J_MONTHS[m - 1];
+      monthSel.appendChild(opt2);
+    }
+    monthSel.value = j.jm;
+
+    updateDaySelect(j.jy, j.jm, j.jd);
+
+    // Wire up change handlers to keep day count in sync
+    yearSel.onchange = function() {
+      updateDaySelect(parseInt(this.value, 10), parseInt($('jMonth').value, 10));
+    };
+    monthSel.onchange = function() {
+      updateDaySelect(parseInt($('jYear').value, 10), parseInt(this.value, 10));
+    };
+  }
+
+  // Rebuilds the day dropdown based on selected year/month
+  function updateDaySelect(jy, jm, preferredDay) {
+    var daySel = $('jDay');
+    var prev = preferredDay || parseInt(daySel.value, 10) || 1;
+    daySel.innerHTML = '';
+
+    var maxDays = jalaliMonthLength(jy, jm);
+    for (var d = 1; d <= maxDays; d++) {
+      var opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = faNum(d);
+      daySel.appendChild(opt);
+    }
+    daySel.value = Math.min(prev, maxDays);
+  }
+
+  function setDatePickerToToday() {
+    var today = new Date();
+    var j = toJalaali(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    $('jYear').value = j.jy;
+    $('jMonth').value = j.jm;
+    updateDaySelect(j.jy, j.jm, j.jd);
+  }
+
+  function getSelectedISO() {
+    return jalaliToISO(
+      parseInt($('jYear').value, 10),
+      parseInt($('jMonth').value, 10),
+      parseInt($('jDay').value, 10)
+    );
+  }
+
+  /* =========================================================================
+   * Rendering
+   * ========================================================================= */
+
+  function renderCourses() {
+    var container = $('courseList');
+
+    if (courses.length === 0) {
+      container.innerHTML =
+        '<div class="empty">' +
+          '<div style="font-size:40px">📚</div>' +
+          '<p>هنوز درسی اضافه نکردی</p>' +
+          '<button class="btn primary" type="button" id="emptyAddBtn">➕ افزودن اولین درس</button>' +
+        '</div>';
+      var b = $('emptyAddBtn');
+      if (b) b.onclick = openAddCourse;
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < courses.length; i++) {
+      var c = courses[i];
+      var st = getStats(c);
+      var rateText = st.total > 0 ? faNum(st.rate) + '٪' : '—';
+
+      html += '<div class="course-card" data-id="' + c.id + '">';
+      html += '<div class="course-head">';
+      html += '<h3>' + escapeHtml(c.name) + '</h3>';
+      html += '<button class="icon-btn" type="button" data-delete-course="' + c.id + '">🗑</button>';
+      html += '</div>';
+
+      if (c.teacher) {
+        html += '<p class="muted">' + escapeHtml(c.teacher) + '</p>';
+      }
+
+      html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px">';
+      html += '<span style="font-size:22px;font-weight:700">' + rateText + '</span>';
+      html += '<span class="muted">' + faNum(st.total) + ' جلسه</span>';
+      html += '</div>';
+
+      html += '<div class="progress"><div class="' + rateClass(st.rate) +
+              '" style="width:' + (st.total > 0 ? st.rate : 0) + '%"></div></div>';
+
+      html += '<div class="stats-mini">';
+      html += '<span class="present">حاضر: ' + faNum(st.present) + '</span>';
+      html += '<span class="late">تأخیر: ' + faNum(st.late) + '</span>';
+      html += '<span class="absent">غایب: ' + faNum(st.absent) + '</span>';
+      html += '<span class="excused">مرخصی: ' + faNum(st.excused) + '</span>';
+      html += '</div>';
+
+      if (c.notes && c.notes.length > 0) {
+        var last = c.notes[c.notes.length - 1];
+        html += '<div class="note-preview">📝 ' +
+                escapeHtml(last.text.substring(0, 60)) +
+                (last.text.length > 60 ? '...' : '') + '</div>';
+      }
+
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  }
+
+  function renderDetail() {
+    var c = findCourse(currentCourseId);
+    if (!c) return;
+
+    var st = getStats(c);
+    $('detailTitle').textContent = c.name;
+    $('detailTeacher').textContent = c.teacher || 'بدون استاد';
+
+    $('detailStats').innerHTML =
+      '<div class="stat present"><b>' + faNum(st.present) + '</b><span>حاضر</span></div>' +
+      '<div class="stat late"><b>' + faNum(st.late) + '</b><span>تأخیر</span></div>' +
+      '<div class="stat absent"><b>' + faNum(st.absent) + '</b><span>غایب</span></div>' +
+      '<div class="stat excused"><b>' + faNum(st.excused) + '</b><span>مرخصی</span></div>';
+
+    var bar = $('detailBar');
+    bar.className = rateClass(st.rate);
+    bar.style.width = (st.total > 0 ? st.rate : 0) + '%';
+
+    renderNotes(c);
+    renderSessions(c);
+  }
+
+  function renderNotes(course) {
+    var list = $('notesList');
+
+    if (!course.notes || course.notes.length === 0) {
+      list.innerHTML = '<p class="muted" style="text-align:center;padding:10px">هنوز یادداشتی نداری</p>';
+      return;
+    }
+
+    // Sort newest first
+    var sorted = course.notes.slice().sort(function(a, b) {
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+
+    var html = '';
+    for (var i = 0; i < sorted.length; i++) {
+      var n = sorted[i];
+      html += '<div class="note-item">';
+      html += '<div class="note-content">';
+      html += '<div class="note-text">' + escapeHtml(n.text) + '</div>';
+      html += '<div class="note-time">' + formatDateTime(n.createdAt) + '</div>';
+      html += '</div>';
+      html += '<button class="icon-btn" type="button" data-delete-note="' + n.id + '">🗑</button>';
+      html += '</div>';
+    }
+    list.innerHTML = html;
+  }
+
+  function renderSessions(course) {
+    // Sort sessions by date, newest first
+    var sessions = (course.sessions || []).slice().sort(function(a, b) {
+      return b.date.localeCompare(a.date);
+    });
+
+    if (sessions.length === 0) {
+      $('sessionList').innerHTML =
+        '<p class="muted" style="text-align:center;padding:16px">هنوز جلسه‌ای ثبت نشده</p>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < sessions.length; i++) {
+      var s = sessions[i];
+      html += '<div class="session-item">';
+      html += '<div class="main">';
+      html += '<div class="date">' + formatDate(s.date) + '</div>';
+      if (s.note) {
+        html += '<div class="session-note">📝 ' + escapeHtml(s.note) + '</div>';
+      }
+      html += '</div>';
+      html += '<span class="badge ' + s.status + '">' + STATUS_LABELS[s.status] + '</span>';
+      html += '<button class="icon-btn" type="button" data-delete-session="' + s.id + '">🗑</button>';
+      html += '</div>';
+    }
+    $('sessionList').innerHTML = html;
+  }
+
+  function renderBackupLabel() {
+    var el = $('lastBackup');
+
+    if (!lastBackup) {
+      el.textContent = 'هنوز پشتیبان نگرفته‌ای';
+      return;
+    }
+
+    var days = Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000);
+    var rel = days <= 0 ? 'امروز' : days === 1 ? 'دیروز' : faNum(days) + ' روز پیش';
+    el.textContent = 'آخرین پشتیبان: ' + rel;
+  }
+
+  /* =========================================================================
+   * Add-Course Panel Toggle
+   * ========================================================================= */
+
+  function openAddCourse() {
+    $('addCourseCard').classList.add('open');
+    $('toggleAddCourse').textContent = '✕ بستن';
+    $('toggleAddCourse').classList.remove('primary');
+    setTimeout(function() { $('courseName').focus(); }, 100);
+  }
+
+  function closeAddCourse() {
+    $('addCourseCard').classList.remove('open');
+    $('toggleAddCourse').textContent = '➕ افزودن درس';
+    $('toggleAddCourse').classList.add('primary');
+  }
+
+  function toggleAddCourse() {
+    if ($('addCourseCard').classList.contains('open')) {
+      closeAddCourse();
+    } else {
+      openAddCourse();
+    }
+  }
+
+  /* =========================================================================
+   * Course & Session Actions
+   * ========================================================================= */
+
+  function addCourse() {
+    var name = $('courseName').value.trim();
+    if (!name) {
+      toast('نام درس را وارد کنید', true);
+      $('courseName').focus();
+      return;
+    }
+
+    courses.push({
+      id: uid(),
+      name: name,
+      teacher: $('courseTeacher').value.trim(),
+      notes: [],
+      sessions: []
+    });
+
+    saveData();
+    renderCourses();
+
+    $('courseName').value = '';
+    $('courseTeacher').value = '';
+    closeAddCourse();
+    toast('درس «' + name + '» اضافه شد ✅');
+  }
+
+  function deleteCourse(id) {
+    var c = findCourse(id);
+    if (!c) return;
+    if (!confirm('درس «' + c.name + '» و همه جلسات و یادداشت‌هاش حذف شود؟')) return;
+
+    courses = courses.filter(function(x) { return x.id !== id; });
+    saveData();
+    renderCourses();
+    toast('درس حذف شد');
+  }
+
+  function openDetail(id) {
+    currentCourseId = id;
+    setDatePickerToToday();
+    $('sessionNote').value = '';
+    $('newNoteInput').value = '';
+    renderDetail();
+    pushModalHistory();
+    $('detailOverlay').classList.add('open');
+  }
+
+  function addSession(status) {
+    var c = findCourse(currentCourseId);
+    if (!c) return;
+
+    var date = getSelectedISO();
+    var note = $('sessionNote').value.trim();
+
+    // If a session already exists for this date, ask to replace it
+    var exists = c.sessions.some(function(s) { return s.date === date; });
+    if (exists) {
+      if (!confirm('برای این تاریخ قبلاً ثبت شده. جایگزین شود؟')) return;
+      c.sessions = c.sessions.filter(function(s) { return s.date !== date; });
+    }
+
+    c.sessions.push({ id: uid(), date: date, status: status, note: note });
+    saveData();
+    $('sessionNote').value = '';
+    renderDetail();
+    renderCourses();
+    toast('«' + STATUS_LABELS[status] + '» برای ' + formatDate(date) + ' ثبت شد ✅');
+  }
+
+  function deleteSession(sessionId) {
+    var c = findCourse(currentCourseId);
+    if (!c) return;
+    c.sessions = c.sessions.filter(function(s) { return s.id !== sessionId; });
+    saveData();
+    renderDetail();
+    renderCourses();
+    toast('جلسه حذف شد');
+  }
+
+  function addNote() {
+    var c = findCourse(currentCourseId);
+    if (!c) return;
+
+    var text = $('newNoteInput').value.trim();
+    if (!text) {
+      toast('متن یادداشت را بنویسید', true);
+      $('newNoteInput').focus();
+      return;
+    }
+
+    if (!c.notes) c.notes = [];
+    c.notes.push({ id: uid(), text: text, createdAt: new Date().toISOString() });
+
+    saveData();
+    $('newNoteInput').value = '';
+    renderNotes(c);
+    renderCourses();
+    toast('یادداشت اضافه شد ✅');
+  }
+
+  function deleteNote(noteId) {
+    var c = findCourse(currentCourseId);
+    if (!c) return;
+    if (!confirm('این یادداشت حذف شود؟')) return;
+
+    c.notes = c.notes.filter(function(n) { return n.id !== noteId; });
+    saveData();
+    renderNotes(c);
+    renderCourses();
+    toast('یادداشت حذف شد');
+  }
+
+  /* =========================================================================
+   * Backup, Restore & Export
+   * ========================================================================= */
+
+  function download(content, filename, mime) {
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
+  }
+
+  function exportJson() {
+    var data = {
+      app: 'hazoor',
+      version: 4,
+      exportedAt: new Date().toISOString(),
+      courses: courses
+    };
+
+    download(
+      JSON.stringify(data, null, 2),
+      'hazoor-backup-' + todayISO() + '.json',
+      'application/json'
+    );
+
+    lastBackup = new Date().toISOString();
+    saveData();
+    renderBackupLabel();
+    toast('پشتیبان دانلود شد ✅');
+  }
+
+  function exportCsv() {
+    var rows = [['درس','استاد','تاریخ شمسی','تاریخ میلادی','وضعیت','یادداشت جلسه']];
+
+    courses.forEach(function(c) {
+      (c.sessions || []).forEach(function(s) {
+        var j = isoToJalali(s.date);
+        var js = j ? (j.jy + '/' + pad2(j.jm) + '/' + pad2(j.jd)) : '';
+        rows.push([
+          c.name,
+          c.teacher || '',
+          js,
+          s.date,
+          STATUS_LABELS[s.status] || s.status,
+          s.note || ''
+        ]);
+      });
+    });
+
+    if (rows.length === 1) {
+      toast('داده‌ای وجود ندارد', true);
+      return;
+    }
+
+    // BOM ensures Excel detects UTF-8 correctly
+    var csv = '\uFEFF' + rows.map(function(r) {
+      return r.map(function(x) {
+        return '"' + String(x).replace(/"/g, '""') + '"';
+      }).join(',');
+    }).join('\n');
+
+    download(csv, 'hazoor-' + todayISO() + '.csv', 'text/csv;charset=utf-8');
+    toast('فایل CSV دانلود شد ✅');
+  }
+
+  function handleImportFile(file) {
+    if (!file) return;
+    if (file.size === 0) {
+      toast('فایل خالی است ❌', true);
+      return;
+    }
+
+    var reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        var data = JSON.parse(e.target.result);
+        if (!data || !Array.isArray(data.courses)) {
+          throw new Error('فایل شامل آرایه courses نیست');
+        }
+
+        var existingIds = {};
+        courses.forEach(function(c) { existingIds[c.id] = true; });
+
+        var added = 0, merged = 0;
+
+        // Merge strategy: match by course ID; add non-duplicate sessions/notes
+        data.courses.forEach(function(nc) {
+          if (!nc || !nc.name) return;
+          var n = normalizeCourse(nc);
+
+          if (existingIds[n.id]) {
+            var ex = findCourse(n.id);
+            if (ex) {
+              // Merge notes (skip duplicates by ID)
+              if (!ex.notes) ex.notes = [];
+              var eNoteIds = {};
+              ex.notes.forEach(function(x) { eNoteIds[x.id] = true; });
+              n.notes.forEach(function(x) {
+                if (!eNoteIds[x.id]) ex.notes.push(x);
+              });
+
+              // Merge sessions (skip duplicates by date)
+              var eDates = {};
+              ex.sessions.forEach(function(s) { eDates[s.date] = true; });
+              n.sessions.forEach(function(s) {
+                if (!eDates[s.date]) ex.sessions.push(s);
+              });
+
+              merged++;
+            }
+          } else {
+            courses.push(n);
+            existingIds[n.id] = true;
+            added++;
+          }
+        });
+
+        saveData();
+        renderCourses();
+        closeAll();
+        toast('بازیابی موفق: ' + faNum(added) + ' جدید، ' + faNum(merged) + ' ادغام ✅');
+      } catch (err) {
+        console.error('[Import] Failed:', err);
+        toast('فایل نامعتبر است: ' + err.message, true);
+      }
+    };
+
+    reader.onerror = function() { toast('خطا در خواندن فایل', true); };
+    reader.readAsText(file);
+  }
+
+  function wipeAll() {
+    if (!confirm('همه داده‌ها حذف شوند؟')) return;
+    if (!confirm('مطمئنی؟ اول پشتیبان بگیر!')) return;
+
+    courses = [];
+    saveData();
+    renderCourses();
+    closeAll();
+    toast('همه داده‌ها پاک شد');
+  }
+
+  /* =========================================================================
+   * Modal Handling & Browser Back-Button Integration
+   * Pushes a history state when a modal opens, so the browser's back
+   * button closes the modal instead of leaving the page.
+   * ========================================================================= */
+
+  function pushModalHistory() {
+    if (!modalHistoryPushed) {
+      try {
+        history.pushState({ modal: true }, '');
+        modalHistoryPushed = true;
+      } catch (e) {
+        // Some environments (e.g., file://) restrict pushState
+      }
+    }
+  }
+
+  function actuallyCloseAll() {
+    var overlays = document.querySelectorAll('.overlay');
+    for (var i = 0; i < overlays.length; i++) {
+      overlays[i].classList.remove('open');
+    }
+    modalHistoryPushed = false;
+  }
+
+  function closeAll() {
+    if (modalHistoryPushed) {
+      try {
+        history.back();
+        // Safety net: force-close if popstate doesn't fire
+        setTimeout(function() {
+          if (modalHistoryPushed) actuallyCloseAll();
+        }, 120);
+      } catch (e) {
+        actuallyCloseAll();
+      }
+    } else {
+      actuallyCloseAll();
+    }
+  }
+
+  window.addEventListener('popstate', function() {
+    if (modalHistoryPushed) actuallyCloseAll();
+  });
+
+  /* =========================================================================
+   * Event Binding
+   * ========================================================================= */
+
+  function bind() {
+    // Add-course panel
+    $('toggleAddCourse').onclick = toggleAddCourse;
+    $('addCourseBtn').onclick = addCourse;
+    $('courseName').onkeydown = function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); addCourse(); }
+    };
+    $('courseTeacher').onkeydown = function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); addCourse(); }
+    };
+
+    // Course list (delegated)
+    $('courseList').onclick = function(e) {
+      var d = e.target.closest('[data-delete-course]');
+      if (d) {
+        e.stopPropagation();
+        deleteCourse(d.getAttribute('data-delete-course'));
+        return;
+      }
+      var card = e.target.closest('.course-card');
+      if (card) openDetail(card.getAttribute('data-id'));
+    };
+
+    // Session & note deletion (delegated)
+    $('sessionList').onclick = function(e) {
+      var d = e.target.closest('[data-delete-session]');
+      if (d) deleteSession(d.getAttribute('data-delete-session'));
+    };
+    $('notesList').onclick = function(e) {
+      var d = e.target.closest('[data-delete-note]');
+      if (d) deleteNote(d.getAttribute('data-delete-note'));
+    };
+
+    // Note form
+    $('addNoteBtn').onclick = addNote;
+    $('newNoteInput').onkeydown = function(e) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        addNote();
+      }
+    };
+
+    // Attendance status buttons
+    var sb = document.querySelectorAll('[data-status]');
+    for (var i = 0; i < sb.length; i++) {
+      sb[i].onclick = function() {
+        addSession(this.getAttribute('data-status'));
+      };
+    }
+
+    // Modal close buttons
+    $('closeDetail').onclick = closeAll;
+    $('closeBackup').onclick = closeAll;
+
+    // Click outside modal closes it
+    var ov = document.querySelectorAll('.overlay');
+    for (var k = 0; k < ov.length; k++) {
+      (function(o) {
+        o.onclick = function(e) {
+          if (e.target === o) closeAll();
+        };
+      })(ov[k]);
+    }
+
+    // Escape key closes any open modal
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeAll();
+    });
+
+    // Backup modal
+    $('openBackup').onclick = function() {
+      pushModalHistory();
+      $('backupOverlay').classList.add('open');
+    };
+    $('exportJson').onclick = exportJson;
+    $('exportCsv').onclick = exportCsv;
+    $('wipeBtn').onclick = wipeAll;
+
+    // File import
+    $('pickFileBtn').onclick = function() { $('importFile').click(); };
+    $('importFile').onchange = function(e) {
+      var f = e.target.files && e.target.files[0];
+      if (f) handleImportFile(f);
+      e.target.value = '';
+    };
+  }
+
+  /* =========================================================================
+   * PWA: Service Worker Registration & Install Prompt
+   * ========================================================================= */
+
+  function initPWA() {
+    // Service Worker requires HTTPS or localhost
+    var isSecure = location.protocol === 'https:' ||
+                   location.hostname === 'localhost' ||
+                   location.hostname === '127.0.0.1';
+
+    if ('serviceWorker' in navigator && isSecure) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js')
+          .then(function(reg) {
+            console.log('[PWA] Service Worker registered:', reg.scope);
+          })
+          .catch(function(err) {
+            console.warn('[PWA] Service Worker registration failed:', err);
+          });
+      });
+    }
+
+    var deferredPrompt = null;
+    var installBtn = $('installBtn');
+
+    // Chrome fires this when the app is installable
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (installBtn) installBtn.style.display = 'inline-block';
+    });
+
+    if (installBtn) {
+      installBtn.onclick = function() {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(choice) {
+          deferredPrompt = null;
+          installBtn.style.display = 'none';
+          if (choice.outcome === 'accepted') {
+            toast('برنامه نصب شد ✅');
+          }
+        });
+      };
+    }
+
+    window.addEventListener('appinstalled', function() {
+      deferredPrompt = null;
+      if (installBtn) installBtn.style.display = 'none';
+      toast('برنامه با موفقیت نصب شد ✅');
+    });
+  }
+
+  /* =========================================================================
+   * Bootstrap
+   * ========================================================================= */
+
+  function init() {
+    loadData();
+    initDatePickers();
+    bind();
+    initPWA();
+    renderCourses();
+    renderBackupLabel();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
